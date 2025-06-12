@@ -94,6 +94,46 @@ decodeTensorYolo(const float* output, const uint& outputSize, const uint& netW, 
   return binfo;
 }
 
+static std::vector<NvDsInferParseObjectInfo>
+decodeTensorCustomYoloDynamic(const float* scoresPtr, const float* bboxesPtr,
+                       int numBoxes, int numClasses,
+                       const uint& netW, const uint& netH,
+                       const std::vector<float>& preclusterThreshold)
+{
+    std::vector<NvDsInferParseObjectInfo> binfo;
+
+    for (int i = 0; i < numBoxes; ++i) {
+        const float* scoreData = scoresPtr + i * numClasses;
+        const float* bboxData = bboxesPtr + i * 4;
+
+        int maxIndex = 0;
+        float maxProb = scoreData[0];
+        for (int c = 1; c < numClasses; ++c) {
+            if (scoreData[c] > maxProb) {
+                maxProb = scoreData[c];
+                maxIndex = c;
+            }
+        }
+
+        if (maxProb < preclusterThreshold[maxIndex]) continue;
+
+        float rxc = bboxData[0];
+        float ryc = bboxData[1];
+        float rw  = bboxData[2];
+        float rh  = bboxData[3];
+
+        float x1 = (rxc - rw / 2.f) * netW;
+        float y1 = (ryc - rh / 2.f) * netH;
+        float x2 = (rxc + rw / 2.f) * netW;
+        float y2 = (ryc + rh / 2.f) * netH;
+
+        addBBoxProposal(x1, y1, x2, y2, netW, netH, maxIndex, maxProb, binfo);
+
+    }
+
+    return binfo;
+}
+
 static bool
 NvDsInferParseCustomYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo,
     NvDsInferNetworkInfo const& networkInfo, NvDsInferParseDetectionParams const& detectionParams,
@@ -119,6 +159,41 @@ NvDsInferParseCustomYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo
   return true;
 }
 
+static bool
+NvDsInferParseCustomYoloDynamic(std::vector<NvDsInferLayerInfo> const& outputLayersInfo,
+    NvDsInferNetworkInfo const& networkInfo, NvDsInferParseDetectionParams const& detectionParams,
+    std::vector<NvDsInferParseObjectInfo>& objectList)
+{
+    if (outputLayersInfo.size() < 2) {
+        std::cerr << "ERROR: Expected at least 2 output layers: scores and bboxes." << std::endl;
+        return false;
+    }
+
+    const NvDsInferLayerInfo& scores = outputLayersInfo[0];
+    const NvDsInferLayerInfo& bboxes = outputLayersInfo[1];
+
+    std::vector<NvDsInferParseObjectInfo> objects;
+
+    const auto& dimsScores = scores.inferDims;
+    const auto& dimsBboxes = bboxes.inferDims;
+
+    int numBoxes = dimsScores.d[0];
+    int numClasses = dimsScores.d[1];
+
+    std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorCustomYoloDynamic(
+        (const float*) (scores.buffer),
+        (const float*) (bboxes.buffer),
+        numBoxes, numClasses,
+        networkInfo.width, networkInfo.height,
+        detectionParams.perClassPreclusterThreshold);
+
+    objects.insert(objects.end(), outObjs.begin(), outObjs.end());
+
+    objectList = objects;
+
+    return true;
+}
+
 extern "C" bool
 NvDsInferParseYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
     NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList)
@@ -127,3 +202,12 @@ NvDsInferParseYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDs
 }
 
 CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseYolo);
+
+extern "C" bool
+NvDsInferParseYoloDynamic(std::vector<NvDsInferLayerInfo> const& outputLayersInfo, NvDsInferNetworkInfo const& networkInfo,
+    NvDsInferParseDetectionParams const& detectionParams, std::vector<NvDsInferParseObjectInfo>& objectList)
+{
+  return NvDsInferParseCustomYoloDynamic(outputLayersInfo, networkInfo, detectionParams, objectList);
+}
+
+CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseYoloDynamic);
