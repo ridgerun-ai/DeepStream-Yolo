@@ -321,7 +321,7 @@ gst-launch-1.0 filesrc location=traffic-video.mp4 ! queue name=filesrc ! qtdemux
 
 ##### Deepstream App
 
-**NOTE**: To use the app, please note that you must modify field `config-file` in the file `deepstream_app_config.txt` to select your configuration file (for example: `config_infer_primary_yolov8_custom.txt`).
+**NOTE**: To use the app, please note that you must modify field `config-file` in the file `deepstream_app_config.txt` to select your configuration file (for example: `deepstream_app_config_yoloV8_custom.txt`).
 
 ```
 deepstream-app -c deepstream_app_config.txt
