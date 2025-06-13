@@ -1,0 +1,36 @@
+[property]
+gpu-id=0
+# denormalizes pixel values ​​from [0, 1] to [0, 255] by dividing by 0.0039215697906911373
+net-scale-factor=0.0039215697906911373
+model-color-format=0
+
+# network-input-order: 0=NCHW, 1=NHWC, 2=CUSTOM
+network-input-order=1
+
+# dynamic batch-size
+batch-size=4
+
+onnx-file=yolo_obj-yolov8s_640x640-v1_float32.onnx
+model-engine-file=model_b4_gpu0_fp32.engine
+labelfile-path=labels.txt
+network-mode=0
+num-detected-classes=80
+interval=0
+gie-unique-id=1
+infer-dims=3;640;640
+process-mode=1
+network-type=0
+cluster-mode=2
+maintain-aspect-ratio=1
+symmetric-padding=1
+
+# custom output parser function and library
+parse-bbox-func-name=NvDsInferParseYoloDynamic
+custom-lib-path=nvdsinfer_custom_impl_Yolo/libnvdsinfer_custom_impl_Yolo.so
+
+engine-create-func-name=NvDsInferYoloCudaEngineGet
+
+[class-attrs-all]
+nms-iou-threshold=0.45
+pre-cluster-threshold=0.25
+topk=300
