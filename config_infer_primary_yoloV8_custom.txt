@@ -1,5 +1,6 @@
 [property]
 gpu-id=0
+# denormalizes pixel values ​​from [0, 1] to [0, 255] by dividing by 0.0039215697906911373
 net-scale-factor=0.0039215697906911373
 model-color-format=0
 
