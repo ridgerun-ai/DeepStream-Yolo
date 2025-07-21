@@ -7,8 +7,8 @@ gie-kitti-output-dir=streamscl
 enable=0
 rows=1
 columns=1
-width=1280
-height=720
+width=1920
+height=1080
 gpu-id=0
 nvbuf-memory-type=0
 

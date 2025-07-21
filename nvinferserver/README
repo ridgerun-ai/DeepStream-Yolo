@@ -102,3 +102,7 @@ Run the ONNX sample with DeepStream Triton gRPC remote inference:
 
   Then run gRPC test:
   $ deepstream-app -c deepstream_app_triton_config_yolov3.txt
+
+Run the ONNX sample with gst-launch-1.0:
+  Run cmdline:
+  $ gst-launch-1.0 filesrc location=traffic-video.mp4 ! queue name=filesrc ! qtdemux ! h264parse config-interval=1 ! queue name=decoder ! nvv4l2decoder  ! queue name=stream0 ! streammux.sink_0 nvstreammux name=streammux width=1920 height=1080 batch-size=1 batched-push-timeout=5000000 ! nvinferserver config-file-path=config_triton_inferserver_primary_yolov8_onnx_custom.txt name=primary-nvinference-engine1 unique-id=1 ! queue ! nvvideoconvert ! "video/x-raw(memory:NVMM), format=RGBA" ! queue ! nvvideoconvert ! queue name=nvvideoconvert ! nvdsosd name=on_screen_display process-mode=0 display-text=True display-bbox=True ! queue name=osd ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! nvv4l2h265enc bitrate=4000000 ! h265parse config-interval=1 ! queue name=file_codec_parser ! qtmux ! queue name=file_muxer ! filesink location=result.mp4

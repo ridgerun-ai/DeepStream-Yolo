@@ -242,8 +242,6 @@ public:
         INFER_ASSERT(boxDesc.dims.numDims == 3 && boxDesc.dims.d[2] == 4);
         INFER_ASSERT(
             scoreDesc.dims.numDims == 3 && scoreDesc.dims.d[2] == (int)kClassLabels.size());
-        float* boxesPtr = (float*)boxes->getBufPtr(0);
-        float* scoresPtr = (float*)scores->getBufPtr(0);
 
         // Number of boxes and classes inferred from score tensor shape
         int numBoxes = 0;
@@ -257,69 +255,74 @@ public:
             return NVDSINFER_CUSTOM_LIB_FAILED;
         }
 
-        for (int i = 0; i < numBoxes; ++i) {
-            // Get class scores for the i bbox
-            const float* scorePtr = scoresPtr + i * numClasses;
+        INFER_ASSERT((int)batchSize == scoreDesc.dims.d[0]);
+        INFER_ASSERT((int)batchSize == boxDesc.dims.d[0]);
 
-            // Get bbox data in (rxc, ryc, rw, rh) format
-            const float* bbox = boxesPtr + i * 4;
+        std::cout << "batchSize: " << batchSize << std::endl;
 
-            // Find class with highest probability (argmax)
-            int maxIndex = 0;
-            float maxProb = scorePtr[0];
-            for (int c = 1; c < numClasses; ++c) {
-                if (scorePtr[c] > maxProb) {
-                    maxProb = scorePtr[c];
-                    maxIndex = c;
+        for (uint32_t batchIdx = 0; batchIdx < batchSize; ++batchIdx) {
+            float* boxesPtr = (float*)boxes->getBufPtr(batchIdx);
+            float* scoresPtr = (float*)scores->getBufPtr(batchIdx);
+
+            std::cout << "batchIdx: " << batchIdx << std::endl;
+
+            for (int i = 0; i < numBoxes; ++i) {
+                const float* scorePtr = scoresPtr + i * numClasses;
+                const float* bbox = boxesPtr + i * 4;
+
+                int maxIndex = 0;
+                std::cout << "box i: " << i << std::endl;
+                std::cout << "scoreDesc.dims.d[0]: " << scoreDesc.dims.d[0] << std::endl;
+                float maxProb = scorePtr[0];
+                for (int c = 1; c < numClasses; ++c) {
+                    if (scorePtr[c] > maxProb) {
+                        maxProb = scorePtr[c];
+                        maxIndex = c;
+                    }
                 }
+
+                if (maxProb < DETECTION_THRESH)
+                    continue;
+
+                float rxc = bbox[0];
+                float ryc = bbox[1];
+                float rw  = bbox[2];
+                float rh  = bbox[3];
+
+                float x1 = (rxc - rw / 2.f) * NET_INPUT_WIDTH;
+                float y1 = (ryc - rh / 2.f) * NET_INPUT_HEIGHT;
+                float x2 = (rxc + rw / 2.f) * NET_INPUT_WIDTH;
+                float y2 = (ryc + rh / 2.f) * NET_INPUT_HEIGHT;
+
+                x1 = clamp(x1, 0, NET_INPUT_WIDTH);
+                y1 = clamp(y1, 0, NET_INPUT_HEIGHT);
+                x2 = clamp(x2, 0, NET_INPUT_WIDTH);
+                y2 = clamp(y2, 0, NET_INPUT_HEIGHT);
+
+                NvDsInferObjectDetectionInfo obj;
+                obj.left = x1;
+                obj.width = clamp(x2 - x1, 0, NET_INPUT_WIDTH);
+                obj.top = y1;
+                obj.height = clamp(y2 - y1, 0, NET_INPUT_HEIGHT);
+
+                if (obj.width < 1 || obj.height < 1)
+                    continue;
+
+                obj.classId = maxIndex;
+                obj.detectionConfidence = maxProb;
+
+                LOG_DEBUG(
+                    "cid: %u, n: %u, obj [%.2f, %.2f, %.2f, %.2f], score:%.2f\n", obj.classId, batchIdx,
+                    obj.top, obj.left, obj.height, obj.width, maxProb);
+
+                parsedBboxes[batchIdx].emplace_back(obj);
             }
-
-            // Apply detection threshold
-            if (maxProb < DETECTION_THRESH) continue;
-
-            // Extract and convert relative bbox to absolute corner format
-            float rxc = bbox[0];
-            float ryc = bbox[1];
-            float rw  = bbox[2];
-            float rh  = bbox[3];
-
-            float netW = NET_INPUT_WIDTH;
-            float netH = NET_INPUT_HEIGHT;
-
-            float x1 = (rxc - rw / 2.f) * netW;
-            float y1 = (ryc - rh / 2.f) * netH;
-            float x2 = (rxc + rw / 2.f) * netW;
-            float y2 = (ryc + rh / 2.f) * netH;
-
-            x1 = clamp(x1, 0, netW);
-            y1 = clamp(y1, 0, netH);
-            x2 = clamp(x2, 0, netW);
-            y2 = clamp(y2, 0, netH);
-
-            NvDsInferObjectDetectionInfo obj;
-            obj.left = x1;
-            obj.width = clamp(x2 - x1, 0, netW);
-            obj.top = y1;
-            obj.height = clamp(y2 - y1, 0, netH);
-
-            if (obj.width < 1 || obj.height < 1) {
-                continue;
-            }
-
-            obj.classId = maxIndex;
-            obj.detectionConfidence = maxProb;
-
-            LOG_DEBUG(
-                "cid: %u, obj [%.2f, %.2f, %.2f, %.2f], score:%.2f\n", obj.classId,
-                obj.top, obj.left, rw, rh, maxProb);
-
-            parsedBboxes[0].emplace_back(obj);
         }
 
-        // Apply NMS filter
-        auto nmsFiltered = applyNMS(parsedBboxes[0]);
-
-        attachObjMeta(inOptions, nmsFiltered, 0);
+        for (uint32_t iBatch = 0; iBatch < batchSize; ++iBatch) {
+            auto nmsFiltered = applyNMS(parsedBboxes[iBatch]);
+            INFER_ASSERT(attachObjMeta(inOptions, parsedBboxes[iBatch], iBatch) == NVDSINFER_SUCCESS);
+        }
 
         return NVDSINFER_SUCCESS;
     }
@@ -472,8 +475,8 @@ YoloV8CustomPostprocessor::attachObjMeta(
         text_params.font_params.font_color = (NvOSD_ColorParams){1, 1, 1, 1};
 
         nvds_acquire_meta_lock(batchMeta);
-        nvds_add_obj_meta_to_frame(frameMeta, objMeta, nullptr);
-        frameMeta->bInferDone = TRUE;
+        nvds_add_obj_meta_to_frame(frameMetaList[batchIdx], objMeta, NULL);
+        frameMetaList[batchIdx]->bInferDone = TRUE;
         nvds_release_meta_lock(batchMeta);
     }
 
