@@ -1,6 +1,6 @@
 name: "yolov8_custom_onnx"
 platform: "onnxruntime_onnx"
-max_batch_size: 4
+max_batch_size: 1
 
 input [
   {
