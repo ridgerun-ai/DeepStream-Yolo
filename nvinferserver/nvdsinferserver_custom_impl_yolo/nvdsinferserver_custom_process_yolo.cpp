@@ -258,21 +258,15 @@ public:
         INFER_ASSERT((int)batchSize == scoreDesc.dims.d[0]);
         INFER_ASSERT((int)batchSize == boxDesc.dims.d[0]);
 
-        std::cout << "batchSize: " << batchSize << std::endl;
-
         for (uint32_t batchIdx = 0; batchIdx < batchSize; ++batchIdx) {
             float* boxesPtr = (float*)boxes->getBufPtr(batchIdx);
             float* scoresPtr = (float*)scores->getBufPtr(batchIdx);
-
-            std::cout << "batchIdx: " << batchIdx << std::endl;
 
             for (int i = 0; i < numBoxes; ++i) {
                 const float* scorePtr = scoresPtr + i * numClasses;
                 const float* bbox = boxesPtr + i * 4;
 
                 int maxIndex = 0;
-                std::cout << "box i: " << i << std::endl;
-                std::cout << "scoreDesc.dims.d[0]: " << scoreDesc.dims.d[0] << std::endl;
                 float maxProb = scorePtr[0];
                 for (int c = 1; c < numClasses; ++c) {
                     if (scorePtr[c] > maxProb) {

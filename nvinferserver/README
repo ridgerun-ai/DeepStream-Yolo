@@ -79,7 +79,7 @@ NOTE: To compile the sources, run make with "sudo -E" or root permission.
 ===============================================================================
 Run the ONNX sample with DeepStream Triton(Gst-nvinferserver) Native CAPI:
   Run cmdline:
-  $ deepstream-app -c deepstream_app_triton_config_yolov3.txt
+  $ deepstream-app -c deepstream_app_triton_config_yolov8.txt
 
   NOTE: Regarding dynamic-sized output tensors, users could update
   `max_buffer_bytes` to preserve a large memory size for each output tensors. e.g.
@@ -101,7 +101,7 @@ Run the ONNX sample with DeepStream Triton gRPC remote inference:
   disable 'model_repo{}' block and enable 'grpc{}' with correct url.
 
   Then run gRPC test:
-  $ deepstream-app -c deepstream_app_triton_config_yolov3.txt
+  $ deepstream-app -c deepstream_app_triton_config_yolov8.txt
 
 Run the ONNX sample with gst-launch-1.0:
   Run cmdline:
