@@ -224,9 +224,20 @@ NvDsInferParseCustomYoloDynamic(std::vector<NvDsInferLayerInfo> const& outputLay
         return false;
     }
 
+    int score_index;
+    int bbox_index;
+
+    if (std::string(outputLayersInfo[0].layerName) == "scores") {
+      score_index=0;
+      bbox_index=1;
+    }else{
+      score_index=1;
+      bbox_index=0;
+    }
+
     // Get the score and bounding box layers
-    const NvDsInferLayerInfo& scores = outputLayersInfo[0];
-    const NvDsInferLayerInfo& bboxes = outputLayersInfo[1];
+    const NvDsInferLayerInfo &scores = outputLayersInfo[score_index];
+    const NvDsInferLayerInfo &bboxes = outputLayersInfo[bbox_index];
 
     std::vector<NvDsInferParseObjectInfo> objects;
 

@@ -305,7 +305,9 @@ force-implicit-batch-dim=1
 
 #### 5. Run
 
-##### Gstream Pipeline
+##### Gstreamer Pipeline
+
+###### NvInfer
 
 Standard YoloV8 model (`yolov8s.onnx`):
 
@@ -319,9 +321,17 @@ Custom YoloV8 model (`yolo_obj-yolov8s_640x640-v1.onnx`):
 gst-launch-1.0 filesrc location=traffic-video.mp4 ! queue name=filesrc ! qtdemux ! h264parse config-interval=1 ! queue name=decoder ! nvv4l2decoder  ! queue name=stream0 ! streammux.sink_0 nvstreammux name=streammux width=1920 height=1080 batch-size=1 batched-push-timeout=5000000 ! nvinfer config-file-path=config_infer_primary_yoloV8_custom.txt name=primary-nvinference-engine1 unique-id=1 ! queue ! nvvideoconvert ! "video/x-raw(memory:NVMM), format=RGBA" ! queue ! nvvideoconvert ! queue name=nvvideoconvert ! nvdsosd name=on_screen_display process-mode=0 display-text=True display-bbox=True ! queue name=osd ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! nvv4l2h265enc bitrate=4000000 ! h265parse config-interval=1 ! queue name=file_codec_parser ! qtmux ! queue name=file_muxer ! filesink location=result.mp4
 ```
 
-##### Deepstream App
+###### NvInferServer
 
-**NOTE**: To use the app, please note that you must modify field `config-file` in the file `deepstream_app_config.txt` to select your configuration file (for example: `deepstream_app_config_yoloV8_custom.txt`).
+**NOTE**: Make sure to place your onnx model in the directory set in the nvinferserver configuration (config-file-path property). For the provided example (config_nvinferserver.txt) it should be located in triton_model_repo/yolov8_custom_onnx/1/model.onnx
+
+Custom YoloV8 model (`yolo_obj-yolov8s_640x640-v1.onnx`):
+
+```bash
+gst-launch-1.0 filesrc location=traffic-video.mp4 ! queue name=filesrc ! qtdemux ! h264parse config-interval=1 ! queue name=decoder ! nvv4l2decoder  ! queue name=stream0 ! streammux.sink_0 nvstreammux name=streammux width=1920 height=1080 batch-size=1 batched-push-timeout=5000000 ! nvinferserver batch-size=1 config-file-path=config_nvinferserver.txt name=primary-nvinference-engine1 unique-id=1 ! queue ! nvvideoconvert ! "video/x-raw(memory:NVMM), format=RGBA" ! queue ! nvvideoconvert ! queue name=nvvideoconvert ! nvdsosd name=on_screen_display process-mode=0 display-text=True display-bbox=True ! queue name=osd ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! nvv4l2h265enc bitrate=4000000 ! h265parse config-interval=1 ! queue name=file_codec_parser ! qtmux ! queue name=file_muxer ! filesink location=result.mp4
+```
+
+##### Deepstream App
 
 ```
 deepstream-app -c deepstream_app_config.txt
