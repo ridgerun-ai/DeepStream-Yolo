@@ -6,12 +6,10 @@ model-color-format=0
 
 # network-input-order: 0=NCHW, 1=NHWC, 2=CUSTOM
 network-input-order=1
-
-# dynamic batch-size
-batch-size=4
+batch-size=1
 
 onnx-file=yolo_obj-yolov8s_640x640-v1_float32.onnx
-model-engine-file=model_b4_gpu0_fp32.engine
+model-engine-file=model_b1_gpu0_fp32.engine
 labelfile-path=labels.txt
 network-mode=0
 num-detected-classes=80

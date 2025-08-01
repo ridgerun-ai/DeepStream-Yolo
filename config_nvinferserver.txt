@@ -1,0 +1,71 @@
+infer_config {
+  unique_id: 1
+  gpu_ids: [0]
+  max_batch_size: 1
+
+  backend {
+    triton {
+      model_name: "yolov8_custom_onnx"
+      version: -1
+
+      model_repo {
+        root: "./triton_model_repo"
+        log_level: 2
+        strict_model_config: true
+        pinned_memory_pool_byte_size: 67108864
+        cuda_device_memory { device: 0, memory_pool_byte_size: 67108864 }
+      }
+    }
+
+    output_mem_type: MEMORY_TYPE_CPU
+
+    outputs [
+      {
+        name: "scores"
+      },
+      {
+        name: "bboxes"
+      }
+    ]
+  }
+
+preprocess {
+    network_format: IMAGE_FORMAT_RGB
+    tensor_order: TENSOR_ORDER_NHWC
+    maintain_aspect_ratio: 1
+    symmetric_padding: 1
+    frame_scaling_hw: FRAME_SCALING_HW_DEFAULT
+    frame_scaling_filter: 1
+
+    normalize {
+      scale_factor: 0.0039215697906911373
+      channel_offsets: [0, 0, 0]
+    }
+  }
+
+custom_lib {
+path : "./nvdsinfer_custom_impl_Yolo/libnvdsinfer_custom_impl_Yolo.so"
+}
+
+postprocess {
+    labelfile_path: "labels.txt"
+    detection {
+      num_detected_classes: 80
+      nms {
+        confidence_threshold: 0.25
+        iou_threshold: 0.45
+        topk : 300
+      }
+      custom_parse_bbox_func:"NvDsInferParseYoloDynamic"
+    }
+}
+}
+
+input_control {
+  process_mode: PROCESS_MODE_FULL_FRAME
+  interval: 0
+}
+
+output_control {
+  output_tensor_meta: false
+}

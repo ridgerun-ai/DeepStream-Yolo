@@ -1,0 +1,26 @@
+name: "yolov8_custom_onnx"
+default_model_filename: "yolo_obj-yolov8s_640x640-v1_float32.onnx"
+platform: "onnxruntime_onnx"
+max_batch_size: 1
+
+input [
+  {
+    name: "input"
+    data_type: TYPE_FP32
+    format: FORMAT_NONE
+    dims: [640, 640, 3]
+  }
+]
+
+output [
+  {
+    name: "scores"
+    data_type: TYPE_FP32
+    dims: [8400, 80]
+  },
+  {
+    name: "bboxes"
+    data_type: TYPE_FP32
+    dims: [8400, 4]
+  }
+]
