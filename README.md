@@ -323,7 +323,7 @@ gst-launch-1.0 filesrc location=traffic-video.mp4 ! queue name=filesrc ! qtdemux
 
 ###### NvInferServer
 
-**NOTE**: Make sure to place your onnx model in the directory set in the nvinferserver configuration (config-file-path property). For the provided example (config_nvinferserver.txt) it should be located in triton_model_repo/yolov8_custom_onnx/1/model.onnx
+**NOTE**: Make sure to place your onnx model in the directory set in the nvinferserver configuration (config-file-path property). For the provided example (config_nvinferserver.txt) it should be located in triton_model_repo/yolov8_custom_onnx/1/yolo_obj-yolov8s_640x640-v1.onnx
 
 Custom YoloV8 model (`yolo_obj-yolov8s_640x640-v1.onnx`):
 

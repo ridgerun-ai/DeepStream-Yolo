@@ -1,4 +1,5 @@
 name: "yolov8_custom_onnx"
+default_model_filename: "yolo_obj-yolov8s_640x640-v1_float32.onnx"
 platform: "onnxruntime_onnx"
 max_batch_size: 1
 
